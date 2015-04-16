@@ -1,4 +1,4 @@
-require "rexml/document"
+require "nokogiri"
 
 module Embulk
   module Parser
@@ -9,7 +9,7 @@ module Embulk
       def self.transaction(config, &control)
         task = {
           :schema => config.param("schema", :array),
-          :root => config.param("root", :string)
+          :root_to_route => config.param("root", :string).split("/")
         }
         columns = task[:schema].each_with_index.map do |c, i|
           Column.new(i, c["name"], c["type"].to_sym)
@@ -19,15 +19,15 @@ module Embulk
 
       def run(file_input)
         schema = @task["schema"]
-        root = @task["root"]
+        route = @task["root_to_route"]
+        doc = RouteDocument.new(route)
+        parser = Nokogiri::XML::SAX::Parser.new(doc)
         while file = file_input.next_file
-          REXML::Document.new(file.read).elements.each(root) do |e|
-            dest = {}
-            e.elements.each do |d|
-              dest[d.name] = d.text
-            end
-            @page_builder.add(make_record(schema, dest))
+          parser.parse(file.read)
+          doc.results.each do |r|
+            @page_builder.add(make_record(schema, r))
           end
+          doc.clear
         end
         @page_builder.finish
       end
@@ -55,6 +55,56 @@ module Embulk
             else
               raise "Unsupported type #{type}"
           end
+        end
+      end
+    end
+
+    class RouteDocument  < Nokogiri::XML::SAX::Document
+      attr_reader :results
+
+      def initialize(route)
+        @route = route
+        clear
+        super()
+      end
+
+      def clear
+        @routes_stack = []
+        @find_route_idx = 0
+        @enter = false
+        @current_element_name = nil
+        @current_data = {}
+        @results = []
+      end
+
+      def start_element(name, attributes = [])
+        if !@enter
+          if name == @route[@find_route_idx]
+            if @find_route_idx == @route.size - 1
+              @enter = true
+            else
+              @routes_stack << name
+              @find_route_idx += 1
+            end
+          end
+        else
+          @current_element_name = name
+        end
+      end
+
+      def characters(string)
+        return if !@enter || string.strip.size == 0 || @current_element_name.nil?
+        val = @current_data[@current_element_name]
+        val = "" if val.nil?
+        val += string
+        @current_data[@current_element_name] = val
+      end
+
+      def end_element(name, attributes = [])
+        if @enter && name == @route.last
+          @enter = false
+          @results << @current_data
+          @current_data = {}
         end
       end
     end
