@@ -7,63 +7,42 @@ module Embulk
       Plugin.register_parser("xml", self)
 
       def self.transaction(config, &control)
+        schema = config.param("schema", :array)
+        schema_serialized = schema.inject({}) do |memo, s|
+          memo[s["name"]] = s["type"]
+          memo
+        end
         task = {
-          :schema => config.param("schema", :array),
+          :schema => schema_serialized,
           :root_to_route => config.param("root", :string).split("/")
         }
-        columns = task[:schema].each_with_index.map do |c, i|
+        columns = schema.each_with_index.map do |c, i|
           Column.new(i, c["name"], c["type"].to_sym)
         end
         yield(task, columns)
       end
 
       def run(file_input)
-        schema = @task["schema"]
-        route = @task["root_to_route"]
-        doc = RouteDocument.new(route)
+        on_new_record = lambda {|record|
+          @page_builder.add(record)
+        }
+        doc = RouteDocument.new(@task["root_to_route"],
+                                @task["schema"], on_new_record)
         parser = Nokogiri::XML::SAX::Parser.new(doc)
         while file = file_input.next_file
           parser.parse(file.read)
-          doc.results.each do |r|
-            @page_builder.add(make_record(schema, r))
-          end
           doc.clear
         end
         @page_builder.finish
       end
-
-      private
-
-      def make_record(schema, e)
-        schema.map do |c|
-          name = c["name"]
-          val = e[name]
-
-          v = val.nil? ? "" : val
-          type = c["type"]
-          case type
-            when "string"
-              v
-            when "long"
-              v.to_i
-            when "double"
-              v.to_f
-            when "boolean"
-              ["yes", "true", "1"].include?(v.downcase)
-            when "timestamp"
-              v.empty? ? nil : Time.strptime(v, c["format"])
-            else
-              raise "Unsupported type #{type}"
-          end
-        end
-      end
     end
 
     class RouteDocument  < Nokogiri::XML::SAX::Document
-      attr_reader :results
 
-      def initialize(route)
+      def initialize(route, schema, on_new_record)
         @route = route
+        @schema = schema
+        @on_new_record = on_new_record
         clear
         super()
       end
@@ -73,8 +52,7 @@ module Embulk
         @find_route_idx = 0
         @enter = false
         @current_element_name = nil
-        @current_data = {}
-        @results = []
+        @current_data = new_map_by_schema
       end
 
       def start_element(name, attributes = [])
@@ -88,7 +66,7 @@ module Embulk
             end
           end
         else
-          @current_element_name = name
+          @current_element_name = (@schema[name].nil?) ? nil : name
         end
       end
 
@@ -101,10 +79,41 @@ module Embulk
       end
 
       def end_element(name, attributes = [])
-        if @enter && name == @route.last
-          @enter = false
-          @results << @current_data
-          @current_data = {}
+        if @enter
+          if name == @route.last
+            @enter = false
+            @on_new_record.call(@current_data.map{|k, v| v})
+            @current_data = new_map_by_schema
+          elsif !@current_element_name.nil?
+            @current_data[name] = convert(@current_data[name], @schema[name])
+          end
+        end
+      end
+
+      private
+
+      def new_map_by_schema
+        @schema.keys.inject({}) do |memo, k|
+          memo[k] = nil
+          memo
+        end
+      end
+
+      def convert(val, type)
+        v = val.nil? ? "" : val
+        case type
+          when "string"
+            v
+          when "long"
+            v.to_i
+          when "double"
+            v.to_f
+          when "boolean"
+            ["yes", "true", "1"].include?(v.downcase)
+          when "timestamp"
+            v.empty? ? nil : Time.strptime(v, c["format"])
+          else
+            raise "Unsupported type #{type}"
         end
       end
     end
