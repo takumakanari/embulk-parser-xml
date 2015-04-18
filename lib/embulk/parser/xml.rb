@@ -26,8 +26,8 @@ module Embulk
         on_new_record = lambda {|record|
           @page_builder.add(record)
         }
-        doc = RouteDocument.new(@task["root_to_route"],
-                                @task["schema"], on_new_record)
+        doc = RecordBinder.new(@task["root_to_route"],
+                               @task["schema"], on_new_record)
         parser = Nokogiri::XML::SAX::Parser.new(doc)
         while file = file_input.next_file
           parser.parse(file.read)
@@ -37,7 +37,7 @@ module Embulk
       end
     end
 
-    class RouteDocument  < Nokogiri::XML::SAX::Document
+    class RecordBinder  < Nokogiri::XML::SAX::Document
 
       def initialize(route, schema, on_new_record)
         @route = route
@@ -48,7 +48,6 @@ module Embulk
       end
 
       def clear
-        @routes_stack = []
         @find_route_idx = 0
         @enter = false
         @current_element_name = nil
@@ -61,7 +60,6 @@ module Embulk
             if @find_route_idx == @route.size - 1
               @enter = true
             else
-              @routes_stack << name
               @find_route_idx += 1
             end
           end
