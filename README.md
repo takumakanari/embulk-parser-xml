@@ -34,19 +34,20 @@ Then you can fetch entries from the following xml:
   <students>
     <student>
       <name>John</name>
-      <age>10</name>
-    <student>
+      <age>10</age>
+    </student>
     <student>
       <name>Paul</name>
-      <age>16</name>
-    <student>
+      <age>16</age>
+    </student>
     <student>
       <name>George</name>
-      <age>17</name>
-    <student>
+      <age>17</age>
+    </student>
     <student>
       <name>Ringo</name>
-      <age>18</name>
-    <student>
+      <age>18</age>
+    </student>
   </students>
+</data>
 ```
