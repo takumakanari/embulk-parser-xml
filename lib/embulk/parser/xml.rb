@@ -82,7 +82,7 @@ module Embulk
             @enter = false
             @on_new_record.call(@current_data.map{|k, v| v})
             @current_data = new_map_by_schema
-          elsif !@current_element_name.nil?
+          elsif !@current_element_name.nil? && @schema.key?(name)
             @current_data[name] = convert(@current_data[name], @schema[name])
           end
         end
@@ -111,7 +111,7 @@ module Embulk
           when "timestamp"
             v.empty? ? nil : Time.strptime(v, c["format"])
           else
-            raise "Unsupported type #{type}"
+            raise "Unsupported type '#{type}'"
         end
       end
     end
