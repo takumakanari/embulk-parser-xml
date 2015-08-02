@@ -30,8 +30,11 @@ module Embulk
                                @task["schema"], on_new_record)
         parser = Nokogiri::XML::SAX::Parser.new(doc)
         while file = file_input.next_file
-          parser.parse(file.read)
-          doc.clear
+          data = file.read
+          if !data.nil? && !data.empty?
+            doc.clear
+            parser.parse(data)
+          end
         end
         @page_builder.finish
       end
