@@ -18,5 +18,6 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "nokogiri", "~> 1.6"
   spec.add_development_dependency "bundler", "~> 1.0"
+  spec.add_development_dependency 'embulk', ['>= 0.8.8']
   spec.add_development_dependency "rake", "~> 10.0"
 end
