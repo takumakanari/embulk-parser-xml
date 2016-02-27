@@ -120,8 +120,9 @@ module Embulk
           when "timestamp"
             unless v.empty?
               dest = Time.strptime(v, config["format"])
+              utc_offset = dest.utc_offset
               zone_offset = Time.zone_offset(config["timezone"])
-              dest.localtime(zone_offset) + dest.utc_offset - Time.zone_offset(config["timezone"])
+              dest.localtime(zone_offset) + utc_offset - zone_offset
             else
               nil
             end
