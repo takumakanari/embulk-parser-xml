@@ -9,7 +9,13 @@ module Embulk
       def self.transaction(config, &control)
         schema = config.param("schema", :array)
         schema_serialized = schema.inject({}) do |memo, s|
-          memo[s["name"]] = s["type"]
+          memo[s["name"]] = {"type" => s["type"]}
+          if s["type"] == "timestamp"
+            memo[s["name"]].merge!({
+              "format" => s["format"],
+              "timezone" => s["timezone"] || "+0900"
+            })
+          end
           memo
         end
         task = {
@@ -100,9 +106,9 @@ module Embulk
         end
       end
 
-      def convert(val, type)
+      def convert(val, config)
         v = val.nil? ? "" : val
-        case type
+        case config["type"]
           when "string"
             v
           when "long"
@@ -112,7 +118,13 @@ module Embulk
           when "boolean"
             ["yes", "true", "1"].include?(v.downcase)
           when "timestamp"
-            v.empty? ? nil : Time.strptime(v, c["format"])
+            unless v.empty?
+              dest = Time.strptime(v, config["format"])
+              zone_offset = Time.zone_offset(config["timezone"])
+              dest.localtime(zone_offset) + dest.utc_offset - Time.zone_offset(config["timezone"])
+            else
+              nil
+            end
           else
             raise "Unsupported type '#{type}'"
         end
