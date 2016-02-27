@@ -22,9 +22,18 @@ parser:
     - {name: age, type: long}
 ```
 
-- **type**: specify this plugin as `xml`
-- **root**: root property to start fetching each entries, specify in *path/to/node* style, required
-- **schema**: specify the attribute of table and data type, required
+- **type**: specify this plugin as `xml` .
+- **root**: root property to start fetching each entries, specify in *path/to/node* style, required.
+- **schema**: specify the attribute of table and data type, required.
+
+If you need to parse column as timestamp type, *schema* supports 2 optional parameters:
+
+```yaml
+schema:
+  - {name: timestamp_column, type: timestamp, format: "%Y-%m-%d", timezone: "+0000"}
+```
+- **format**: timestamp format to parse, required.
+- **timezone**: timestamp will be parsing in this timezone, `"+0900"` is used by default.
 
 Then you can fetch entries from the following xml:
 
