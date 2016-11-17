@@ -20,7 +20,7 @@ module Embulk
         end
         task = {
           :schema => schema_serialized,
-          :root_to_route => config.param("root", :string).split("/")
+          :root => config.param("root", :string).split("/")
         }
         columns = schema.each_with_index.map do |c, i|
           Column.new(i, c["name"], c["type"].to_sym)
@@ -29,15 +29,11 @@ module Embulk
       end
 
       def run(file_input)
-        on_new_record = lambda {|record|
-          @page_builder.add(record)
-        }
-        doc = RecordBinder.new(@task["root_to_route"],
-                               @task["schema"], on_new_record)
+        doc = RecordBinder.new(@task["root"], @task["schema"], @page_builder)
         parser = Nokogiri::XML::SAX::Parser.new(doc)
         while file = file_input.next_file
           data = file.read
-          if !data.nil? && !data.empty?
+          unless data.nil?
             doc.clear
             parser.parse(data)
           end
@@ -48,10 +44,10 @@ module Embulk
 
     class RecordBinder  < Nokogiri::XML::SAX::Document
 
-      def initialize(route, schema, on_new_record)
+      def initialize(route, schema, page_builder)
         @route = route
         @schema = schema
-        @on_new_record = on_new_record
+        @page_builder = page_builder
         clear
         super()
       end
@@ -89,7 +85,7 @@ module Embulk
         if @enter
           if name == @route.last
             @enter = false
-            @on_new_record.call(@current_data.map{|k, v| v})
+            @page_builder.add(@current_data.map{|k, v| v})
             @current_data = new_map_by_schema
           elsif !@current_element_name.nil? && @schema.key?(name)
             @current_data[name] = convert(@current_data[name], @schema[name])
@@ -131,6 +127,5 @@ module Embulk
         end
       end
     end
-
   end
 end
