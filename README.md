@@ -10,8 +10,14 @@ Read data from input as xml and fetch each entries to output.
 * **Load all or nothing**: yes
 * **Resume supported**: no
 
+## Types
+
+- **xml**:   Find rows by SAX.
+- **xpath**: Find finds rows by Xpath, so you can process XML by more complex condition than *xml* type.
 
 ## Configuration
+
+### XML
 
 ```yaml
 parser:
@@ -32,10 +38,41 @@ If you need to parse column as timestamp type, *schema* supports 2 optional para
 schema:
   - {name: timestamp_column, type: timestamp, format: "%Y-%m-%d", timezone: "+0000"}
 ```
+
 - **format**: timestamp format to parse, required.
 - **timezone**: timestamp will be parsing in this timezone, `"+0900"` is used by default.
 
-Then you can fetch entries from the following xml:
+
+### Xpath
+
+```yaml
+parser:
+  type: xpath
+  root: //data/students/student
+  schema:
+    - {path: name, type: string, name: name}
+    - {path: age, type: long, name: age}
+```
+
+- **type**: specify this plugin as `xpath` .
+- **root**: root property to start fetching each entries, specify in Xpath, *'/''* is used by default.
+- **schema**: specify the attribute of table and data type, required.
+- **namespaces**: xml namespaces
+
+
+If you need to parse column as timestamp type, *schema* supports 2 optional parameters:
+
+```yaml
+schema:
+  - {name: timestamp_column, type: timestamp, format: "%Y-%m-%d", timezone: "+0000"}
+```
+
+- **format**: timestamp format to parse, required.
+- **timezone**: timestamp will be parsing in this timezone, `"+0900"` is used by default.
+
+
+
+Here is XML for xample:
 
 ```xml
 <data>
