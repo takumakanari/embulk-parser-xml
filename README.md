@@ -52,6 +52,7 @@ parser:
   schema:
     - {path: name, type: string, name: name}
     - {path: age, type: long, name: age}
+    - {path: hobbies/hobby, type: json, name: hobbies}
 ```
 
 - **type**: specify this plugin as `xpath` .
@@ -71,7 +72,6 @@ schema:
 - **timezone**: timestamp will be parsing in this timezone, `"+0900"` is used by default.
 
 
-
 Here is XML for xample:
 
 ```xml
@@ -81,10 +81,17 @@ Here is XML for xample:
     <student>
       <name>John</name>
       <age>10</age>
+      <hobbies>
+        <hobby>music</hobby>
+        <hobby>movie</hobby>
+      </hobbies>
     </student>
     <student>
       <name>Paul</name>
       <age>16</age>
+      <hobbies>
+        <hobby>game</hobby>
+      </hobbies>
     </student>
     <student>
       <name>George</name>
