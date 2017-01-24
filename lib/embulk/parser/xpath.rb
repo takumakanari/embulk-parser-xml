@@ -27,7 +27,7 @@ module Embulk
             Nokogiri::XML(data).xpath(@task["root"], @task["namespaces"]).each do |item|
               dest = @task["schema"].inject([]) do |memo, s|
                 es = item.xpath(s["path"], @namespaces)
-                memo << convert(es.empty? ? nil : es.text, s["type"])
+                memo << convert(es.empty? ? nil : es.map(&:text), s["type"])
                 memo
               end
               @page_builder.add(dest)
@@ -39,20 +39,24 @@ module Embulk
 
       private
       def convert(val, type)
-        v = val.nil? ? "" : val
+        v = if type == "json"
+          val.nil? ? nil : val
+        else
+          val.nil? ? "" : val.join("")
+        end
         case type
-          when "string"
-            v
-          when "long"
-            v.to_i
-          when "double"
-            v.to_f
-          when "boolean"
-            ["yes", "true", "1"].include?(v.downcase)
-          when "timestamp"
-            v.empty? ? nil : Time.strptime(v, c["format"])
-          else
-            raise "Unsupported type '#{type}'"
+        when "string", "json"
+          v
+        when "long"
+          v.to_i
+        when "double"
+          v.to_f
+        when "boolean"
+          ["yes", "true", "1"].include?(v.downcase)
+        when "timestamp"
+          v.empty? ? nil : Time.strptime(v, c["format"])
+        else
+          raise "Unsupported type '#{type}'"
         end
       end
     end
