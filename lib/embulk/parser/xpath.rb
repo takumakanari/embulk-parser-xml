@@ -54,7 +54,14 @@ module Embulk
         when "boolean"
           ["yes", "true", "1"].include?(v.downcase)
         when "timestamp"
-          v.empty? ? nil : Time.strptime(v, schema["format"])
+          unless v.empty?
+            dest = Time.strptime(v, schema["format"])
+            utc_offset = dest.utc_offset
+            zone_offset = Time.zone_offset(schema["timezone"])
+            dest.localtime(zone_offset) + utc_offset - zone_offset
+          else
+            nil
+          end
         else
           raise "Unsupported type '#{type}'"
         end
