@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
   spec.name          = "embulk-parser-xml"
-  spec.version       = "0.0.10"
+  spec.version       = "0.0.11"
   spec.authors       = ["Takuma kanari"]
   spec.email         = ["chemtrails.t@gmail.com"]
   spec.summary       = %q{Embulk parser plugin for XML}
@@ -18,6 +18,6 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "nokogiri", "~> 1.6.0"
   spec.add_development_dependency "bundler", "~> 1.0"
-  spec.add_development_dependency 'embulk', ['>= 0.8.8']
+  spec.add_development_dependency 'embulk', ['>= 0.8.39']
   spec.add_development_dependency "rake", "~> 10.0"
 end
