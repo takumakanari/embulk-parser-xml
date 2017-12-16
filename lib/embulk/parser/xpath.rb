@@ -25,9 +25,9 @@ module Embulk
           data = file.read
           if !data.nil? && !data.empty?
             Nokogiri::XML(data).xpath(@task["root"], @task["namespaces"]).each do |item|
-              dest = @task["schema"].inject([]) do |memo, s|
-                es = item.xpath(s["path"], @namespaces)
-                memo << convert(es.empty? ? nil : es.map(&:text), s["type"])
+              dest = @task["schema"].inject([]) do |memo, schema|
+                es = item.xpath(schema["path"], @namespaces)
+                memo << convert(es.empty? ? nil : es.map(&:text), schema)
                 memo
               end
               @page_builder.add(dest)
@@ -38,13 +38,13 @@ module Embulk
       end
 
       private
-      def convert(val, type)
-        v = if type == "json"
+      def convert(val, schema)
+        v = if schema["type"] == "json"
           val.nil? ? nil : val
         else
           val.nil? ? "" : val.join("")
         end
-        case type
+        case schema["type"]
         when "string", "json"
           v
         when "long"
@@ -54,7 +54,14 @@ module Embulk
         when "boolean"
           ["yes", "true", "1"].include?(v.downcase)
         when "timestamp"
-          v.empty? ? nil : Time.strptime(v, c["format"])
+          unless v.empty?
+            dest = Time.strptime(v, schema["format"])
+            utc_offset = dest.utc_offset
+            zone_offset = Time.zone_offset(schema["timezone"])
+            dest.localtime(zone_offset) + utc_offset - zone_offset
+          else
+            nil
+          end
         else
           raise "Unsupported type '#{type}'"
         end
